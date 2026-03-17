@@ -1,0 +1,45 @@
+name: "home moviedb"
+networks: 
+  movie:
+# TODO: use mongo
+services:
+  mongodb:
+    image: mongo:latest
+    restart: always
+    ports: 
+      - 5432:5432
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 20s
+      timeout: 5s
+      retries: 5
+    networks:
+      - movie
+    volumes:
+      - db:/var/lib/postgresql
+
+  backend:
+    build: ./backend
+    secrets:
+      - db_password
+    environment:
+      - MONGO_URI=mongodb://${DB_ROOT_USER}:${DB_PASSWORD}
+    ports:
+      - 8080:8080
+    # volumes: # TODO: decide whether to use this when making the database part
+    depends_on:
+      mongodb:
+        condition: service_healthy
+    networks:
+    - movie
+
+volumes:
+  db:
+    driver: local
+
+secrets:
+  db_password:
+    environment: DB_PASSWORD  # Pulls from .env / shell env
