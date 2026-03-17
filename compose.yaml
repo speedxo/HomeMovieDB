@@ -1,35 +1,36 @@
 name: "home moviedb"
 networks: 
   movie:
-# TODO: use mongo
 services:
   mongodb:
-    image: mongo:latest
-    restart: always
-    ports: 
-      - 5432:5432
+    image: mongo:7
+    restart: unless-stopped
+    # ports: 
+    secrets:
+      - db_password
     environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      - MONGO_INITDB_ROOT_USERNAME=${DB_ROOT_USER}
+      - MONGO_INITDB_ROOT_PASSWORD_FILE=/run/secrets/db_password
+      - MONGO_INITDB_DATABASE=${DB_NAME}
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres"]
-      interval: 20s
+      test: ["CMD-SHELL", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
       timeout: 5s
       retries: 5
+      start_period: 30s
     networks:
       - movie
     volumes:
-      - db:/var/lib/postgresql
+      - mongo_data:/data/db
 
   backend:
     build: ./backend
     secrets:
       - db_password
     environment:
-      - MONGO_URI=mongodb://${DB_ROOT_USER}:${DB_PASSWORD}
+      - MONGO_URI=mongodb://${DB_ROOT_USER}:${DB_PASSWORD}@db:27017/${DB_NAME}?authSource=admin
     ports:
       - 8080:8080
-    # volumes: # TODO: decide whether to use this when making the database part
     depends_on:
       mongodb:
         condition: service_healthy
@@ -37,8 +38,7 @@ services:
     - movie
 
 volumes:
-  db:
-    driver: local
+  mongo_data:
 
 secrets:
   db_password:
