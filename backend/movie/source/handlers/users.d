@@ -28,7 +28,7 @@ void getUser(scope HTTPServerRequest req, scope HTTPServerResponse res)
 
     int id = req.params["id"].to!int;
 
-    foreach (user; fakeDb)
+    foreach (user; testSet)
     {
         if (user.id == id)
         {
@@ -45,12 +45,11 @@ void createUser(scope HTTPServerRequest req, scope HTTPServerResponse res)
 {
     auto body_ = req.json;
     User newUser = User(
-        cast(int) fakeDb.length + 1,
+        cast(int) testSet.length + 1,
         body_["name"].get!string,
-        body_["email"].get!string,
     );
 
-    fakeDb ~= newUser;
+    testSet ~= newUser;
 
     res.statusCode = HTTPStatus.created;
     res.writeJsonBody(newUser.serializeToJson());

@@ -11,20 +11,6 @@ import handlers.users;
 
 ServerParams serverparams;
 
-void handleRequest(scope HTTPServerRequest req, scope HTTPServerResponse res)
-{
-    // separating concerns, nice for future expansion
-    // one serves the web pages
-    auto pages = new URLRouter();
-
-    pages.get("/", &handleHomePage);
-
-    // another serves the backend interface
-    auto api = new URLRouter();
-    api.get("/user", &listAllUsers);
-    api.get("/user/:id", &getUser);
-    api.post("/user", &createUser);
-}
 
 void main(string[] args)
 {
@@ -71,7 +57,25 @@ void main(string[] args)
         // settings.tlsContext.usePrivateKeyFile("certificates/server-key.pem");
     }
 
-    auto listen = listenHTTP(settings, &handleRequest);
+    // Routing:
+    // separating concerns, nice for future expansion
+    // one serves the web pages
+    auto pages = new URLRouter();
+
+    pages.get("/", &handleHomePage);
+
+    // another serves the backend interface
+    auto api = new URLRouter();
+    api.get("/api/user", &getAllUsers);
+    api.get("/api/user/:id", &getUser);
+    api.post("/api/user", &createUser);
+
+    // link them together with a root object
+    auto rootRouter = new URLRouter();
+    rootRouter.any("/api/*", api); // backend api calls
+    rootRouter.any("/*", pages); // everything else
+
+    auto listen = listenHTTP(settings, rootRouter);
     scope (exit) 
     {
         listen.stopListening();

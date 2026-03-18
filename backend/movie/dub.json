@@ -7,7 +7,7 @@
 		"vibe-d": "~>0.10.2",
 		"vibe-d:mongodb": "~>0.10.3"
 	},
-	"description": "A dlang interface for a postgres db that holds movies and stuff.",
+	"description": "A dlang interface for a mongoDB database that holds movies and stuff.",
 	"license": "BSL-1.0",
 	"name": "movie",
 	"targetPath": "out"
