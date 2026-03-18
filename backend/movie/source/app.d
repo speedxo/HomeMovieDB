@@ -1,6 +1,7 @@
 module app;
 
 import std.stdio;
+import std.conv:to;
 import vibe.vibe;
 
 import params;
@@ -19,8 +20,19 @@ void main(string[] args)
     {
         switch (args[i])
         {
-        case "-https":
+        case "--https":
             serverparams.useHTTPS = true;
+            break;
+        
+        case "--port":
+            // optionally TODO : data validation and feedback message on fail
+            serverparams.usePort = to!ushort(args[++i]);
+            break;
+
+        case "--ip":
+            // optionally TODO : data validation and feedback message on fail
+            // select an address to use, can be v6 or v4
+            serverparams.bindAddresses = [args[++i]];
             break;
 
         default:
