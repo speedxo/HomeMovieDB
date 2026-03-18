@@ -14,9 +14,6 @@ ServerParams serverparams;
 
 void main(string[] args)
 {
-    // writeln(args.length);
-    // serverparams = new ServerParams;
-
     // save arguments
     for (int i = 1; i < args.length; i++)
     {
@@ -44,7 +41,7 @@ void main(string[] args)
     else
     {
         // To serve HTTPS connections, 
-        // the configuration simply needs to have a TLS context that has 
+        // the configuration needs to have a TLS context that has 
         // the appropriate certificate and private key files set:
         
         // Warning to user
@@ -79,6 +76,8 @@ void main(string[] args)
     rootRouter.any("/api/*", api); // backend api calls
     rootRouter.any("/*", pages); // everything else
 
+
+    // Start listening with the chosen settings
     auto listen = listenHTTP(settings, rootRouter);
     scope (exit) 
     {
