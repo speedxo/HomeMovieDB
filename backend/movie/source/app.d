@@ -2,33 +2,28 @@ module app;
 
 import std.stdio;
 import vibe.d;
+
 import params;
+
+import handlers.home;
+import handlers.users;
+
 
 ServerParams serverparams;
 
 void handleRequest(scope HTTPServerRequest req, scope HTTPServerResponse res)
 {
-    // TODO: rewrite
+    // separating concerns, nice for future expansion
+    // one serves the web pages
+    auto pages = new URLRouter();
 
-    /* example from cloude
+    pages.get("/", &handleHomePage);
 
-    auto api = new URLRouter("/api/v1");
-    api.get("/users", &listUsers);
-    api.post("/users", &createUser);
-
-    auto router = new URLRouter();
-    router.any("/api/v1/*", api);
-    router.get("/", &handleHome);
-
-    */
-
-    if (req.path == "/")
-    {
-        res.writeBody("Hello, World!", "text/plain");
-        return;
-    }
-
-    auto routes = new URLRouter();
+    // another serves the backend interface
+    auto api = new URLRouter();
+    api.get("/user", &listAllUsers);
+    api.get("/user/:id", &getUser);
+    api.post("/user", &createUser);
 }
 
 void main(string[] args)
