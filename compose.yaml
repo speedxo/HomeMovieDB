@@ -5,7 +5,6 @@ services:
   mongodb:
     image: mongo:7
     restart: unless-stopped
-    # ports: 
     secrets:
       - db_password
     environment:
