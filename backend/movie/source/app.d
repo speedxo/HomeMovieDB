@@ -16,7 +16,7 @@ ServerParams serverparams;
 void main(string[] args)
 {
     // save arguments
-    for (int i = 1; i < args.length; i++)
+    foreach (i; 1..args.length)
     {
         switch (args[i])
         {

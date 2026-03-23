@@ -5,6 +5,10 @@ FROM dlang2/dmd-ubuntu:latest
 WORKDIR /app
 ENV DC=dmd
 
+# privilege lowering - docker best practice
+RUN useradd -r -s /bin/false vibeapp
+USER vibeapp
+
 # copy the source code into the container
 COPY . .
 
