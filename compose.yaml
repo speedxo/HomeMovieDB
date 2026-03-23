@@ -1,5 +1,5 @@
 name: "home moviedb"
-networks: 
+networks:
   movie:
 services:
   mongodb:
@@ -27,6 +27,7 @@ services:
     secrets:
       - db_password
     environment:
+      - MONGO_DB=${DB_NAME}
       - MONGO_URI=mongodb://${DB_ROOT_USER}:${DB_PASSWORD}@db:27017/${DB_NAME}?authSource=admin
     ports:
       - 8080:8080
@@ -34,11 +35,11 @@ services:
       mongodb:
         condition: service_healthy
     networks:
-    - movie
+      - movie
 
 volumes:
   mongo_data:
 
 secrets:
   db_password:
-    environment: DB_PASSWORD  # Pulls from .env / shell env
+    environment: DB_PASSWORD # Pulls from .env / shell env

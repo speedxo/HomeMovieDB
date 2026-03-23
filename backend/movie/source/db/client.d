@@ -20,15 +20,14 @@ class DBClient {
 
     // avoids Double-checked locking problem
     // https://en.wikipedia.org/wiki/Double-checked_locking
-    static DBClient get() {
-
+    static MongoClient get() {
         // referring to the thread-global instance_ here
         // would possibly make younger threads make references 
         // to a premature object
         if (!instantiated_) {
-            synchronized (DBClient.classinfo) {
+            synchronized (MongoClient.classinfo) {
                 if (!instance_) {
-                    instance_ = new DBClient();
+                    instance_ = connectMongoDB(mongoURI);
                 }
 
                 instantiated_ = true;
@@ -37,8 +36,4 @@ class DBClient {
 
         return instance_;
     }
-}
-
-void initialise(string mongoURI) {
-    instance_ = connectMongoDB(mongoURI);
 }

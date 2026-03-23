@@ -6,7 +6,7 @@ import vibe.vibe;
 
 import params;
 
-import db.client : initialise;
+import db.client;
 import handlers.home;
 import handlers.users;
 import std.process : environment;
@@ -39,9 +39,7 @@ void main(string[] args) {
 
     }
 
-    // managing database connection
-    initialise(environment["MONGO_URI"]);
-    // TODO: populate database if empty
+    // TODO: make a db call and populate it if empty
 
     // configuring http settings
     auto settings = new HTTPServerSettings;
@@ -72,6 +70,7 @@ void main(string[] args) {
     // separating concerns, nice for future expansion
     // TODO: have handlers give their own routes that they define themselves, 
     // and combine them all here.
+    // perhaps I should choose new routes for the user one instead of just /api/*
 
     // one serves the web pages
     auto pages = new URLRouter();
@@ -79,14 +78,11 @@ void main(string[] args) {
     pages.get("/", &handleHomePage);
 
     // another serves the backend interface
-    auto api = new URLRouter();
-    api.get("/api/user", &getAllUsers);
-    api.get("/api/user/:id", &getUser);
-    api.post("/api/user", &createUser);
+    auto userApi = users.configureRouter();
 
     // link them together with a root object
     auto rootRouter = new URLRouter();
-    rootRouter.any("/api/*", api); // backend api calls
+    rootRouter.any("/api/*", userApi); // backend api calls
     rootRouter.any("/*", pages); // everything else
 
     // Start listening with the chosen settings
