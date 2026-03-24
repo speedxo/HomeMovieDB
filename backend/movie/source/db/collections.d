@@ -5,6 +5,7 @@ import db.client;
 import vibe.data.bson;
 import std.process : environment;
 import db.models.user : User;
+import std.typecons : Nullable;
 
 private MongoCollection userCollection() {
     return DBClient.get.getCollection(environment["MONGO_DB"] ~ ".users");
