@@ -1,6 +1,7 @@
 module db.client;
 
 import vibe.db.mongo.mongo;
+import std.process : environment;
 
 // Credit: Low-Lock Singleton Pattern
 // From David Simcha's D-Specific Design Patterns talk at DConf 2013
@@ -27,7 +28,7 @@ class DBClient {
         if (!instantiated_) {
             synchronized (MongoClient.classinfo) {
                 if (!instance_) {
-                    instance_ = connectMongoDB(mongoURI);
+                    instance_ = connectMongoDB(environment["MONGO_URI"]);
                 }
 
                 instantiated_ = true;

@@ -8,7 +8,7 @@ import params;
 
 import db.client;
 import handlers.home;
-import handlers.users;
+import handlers.users : configureUserAPIRouter;
 import std.process : environment;
 
 ServerParams serverparams;
@@ -78,7 +78,7 @@ void main(string[] args) {
     pages.get("/", &handleHomePage);
 
     // another serves the backend interface
-    auto userApi = users.configureRouter();
+    auto userApi = configureUserAPIRouter();
 
     // link them together with a root object
     auto rootRouter = new URLRouter();

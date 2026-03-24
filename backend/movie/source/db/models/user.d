@@ -1,11 +1,12 @@
 module db.models.user;
 
 import vibe.data.bson;
+import std.datetime : SysTime;
 
 struct User {
     BsonObjectID _id;
     string name;
     string email;
-    BsonDate createdAt;
-    BsonDate updatedAt;
+    SysTime createdAt;
+    SysTime updatedAt;
 }
