@@ -10,15 +10,29 @@ import db.collections : addUser, findUserByID, findUserByEmail, deleteUser, upda
 
 URLRouter configureUserAPIRouter() {
     auto router = new URLRouter();
-    router.get("/api/user/:id", &getUser);
+    router.get("/api/user/id/:id", &getUserById);
+    router.get("/api/user/email/:email", &getUserByEmail);
     router.post("/api/user", &createUser);
 
     return router;
 }
 
-void getUser(scope HTTPServerRequest req, scope HTTPServerResponse res) {
+void getUserById(scope HTTPServerRequest req, scope HTTPServerResponse res) {
     auto id = BsonObjectID.fromString(req.params["id"]);
     auto user = findUserByID(id);
+
+    if (user.isNull) {
+        res.statusCode = HTTPStatus.notFound;
+        res.writeJsonBody(["error": "User not found"]);
+        return;
+    }
+
+    res.writeJsonBody(user.get);
+}
+
+void getUserByEmail(scope HTTPServerRequest req, scope HTTPServerResponse res) {
+    auto email = BsonObjectID.fromString(req.params["email"]);
+    auto user = findUserByEmail(email);
 
     if (user.isNull) {
         res.statusCode = HTTPStatus.notFound;
