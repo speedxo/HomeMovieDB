@@ -31,7 +31,7 @@ void getUserById(scope HTTPServerRequest req, scope HTTPServerResponse res) {
 }
 
 void getUserByEmail(scope HTTPServerRequest req, scope HTTPServerResponse res) {
-    auto email = BsonObjectID.fromString(req.params["email"]);
+    auto email = req.params["email"];
     auto user = findUserByEmail(email);
 
     if (user.isNull) {

@@ -30,7 +30,7 @@ Nullable!User findUserByID(BsonObjectID id) {
 
 Nullable!User findUserByEmail(string email) {
     Nullable!User result;
-    auto document = userCollection.findOne(["email": email]);
+    auto document = userCollection.findOne(["email": Bson(email)]);
     if (!document.isNull) {
         result = deserializeBson!User(document);
     }
