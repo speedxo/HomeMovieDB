@@ -1,0 +1,1 @@
+module db.models.title;

@@ -9,4 +9,7 @@ struct User {
     string email;
     SysTime createdAt;
     SysTime updatedAt;
+    BsonObjectID[] seenTitles;
+    BsonObjectID[] watchingTitles;
+    BsonObjectID[] topTitles;
 }
