@@ -94,3 +94,7 @@ void main(string[] args) {
     runApplication();
 
 }
+
+unittest {
+    assert(true, "This is a passing test");
+}

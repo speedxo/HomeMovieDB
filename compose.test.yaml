@@ -1,0 +1,17 @@
+name: "home moviedb test"
+
+services:
+  mongodb:
+    env_file:
+      - .env.test
+    volumes:
+      - type: tmpfs
+        target: /data/db
+
+  backend:
+    build:
+      args:
+        BUILD_TYPE: "unittest"
+    env_file:
+      - .env.test
+    command: sh -c "./movie/out/movie && echo 'Normal Exit, All Tests Passed' || 'Abnormal Exit, Some Tests Failed'"

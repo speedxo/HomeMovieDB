@@ -9,7 +9,8 @@ ENV DC=dmd
 COPY . .
 
 # build application using dub
-RUN cd movie && dub build --build=release
+ARG BUILD_TYPE="release"
+RUN cd movie && dub build --build=${BUILD_TYPE}
 
 # privilege lowering - docker best practice
 RUN useradd -r -s /bin/false vibeapp

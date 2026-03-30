@@ -3,6 +3,7 @@ docs.json
 __dummy.html
 docs/
 /movie
+/out
 movie.so
 movie.dylib
 movie.dll

@@ -1,10 +1,14 @@
 name: "home moviedb"
+
 networks:
   movie:
+
 services:
   mongodb:
     image: mongo:7
     restart: unless-stopped
+    env_file:
+      - .env
     secrets:
       - db_password
     environment:
@@ -13,7 +17,7 @@ services:
       - MONGO_INITDB_DATABASE=${DB_NAME}
     healthcheck:
       test: ["CMD-SHELL", "mongosh", "--eval", "db.adminCommand('ping')"]
-      interval: 10s
+      interval: 30s
       timeout: 5s
       retries: 5
       start_period: 30s
@@ -26,6 +30,8 @@ services:
     build: ./backend
     secrets:
       - db_password
+    env_file:
+      - .env
     environment:
       - MONGO_DB=${DB_NAME}
       - MONGO_URI=mongodb://${DB_ROOT_USER}:${DB_PASSWORD}@db:27017/${DB_NAME}?authSource=admin
