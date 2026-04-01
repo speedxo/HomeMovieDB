@@ -12,4 +12,5 @@ struct User {
     BsonObjectID[] seenTitles;
     BsonObjectID[] watchingTitles;
     BsonObjectID[] topTitles;
+    BsonObjectID[] reviews;
 }
