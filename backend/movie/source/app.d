@@ -32,6 +32,10 @@ void main(string[] args) {
             serverparams.bindAddresses = [args[++i]];
             break;
 
+        case "--skip-repopulation":
+            serverparams.repopulateIfEmpty = false;
+            break;
+
         default:
             writeln("Error: Command line argument not recognised: ", args[i]);
             return;
@@ -39,7 +43,9 @@ void main(string[] args) {
 
     }
 
-    // TODO: make a db call and populate it if empty
+    if (serverparams.repopulateIfEmpty) {
+        // TODO: test database is empty, otherwise create new collections from data
+    }
 
     // configuring http settings
     auto settings = new HTTPServerSettings;
@@ -92,6 +98,10 @@ void main(string[] args) {
     }
 
     runApplication();
+
+}
+
+void repopulateDB() {
 
 }
 
