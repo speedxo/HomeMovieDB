@@ -29,7 +29,11 @@ docs/
 .env.*
 .env.local
 .env.*.local
-
+# excluding example file
 !.env.example
 
+# VSCode 
 .vscode
+
+# don't upload your HTTPS certificates
+certificates/

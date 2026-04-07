@@ -32,7 +32,7 @@ void main(string[] args) {
             serverparams.bindAddresses = [args[++i]];
             break;
 
-        case "--skip-repopulation":
+        case "--skip-import":
             serverparams.repopulateIfEmpty = false;
             break;
 
@@ -45,6 +45,10 @@ void main(string[] args) {
 
     if (serverparams.repopulateIfEmpty) {
         // TODO: test database is empty, otherwise create new collections from data
+
+        // test emptiness somehow
+
+        repopulateDB();
     }
 
     // configuring http settings
@@ -102,7 +106,11 @@ void main(string[] args) {
 }
 
 void repopulateDB() {
+    // populate users first
 
+    // populate movies
+
+    // then we have the id's (get id from title name function and get id from username) to put in the reviews
 }
 
 unittest {
