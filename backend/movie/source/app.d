@@ -7,14 +7,15 @@ import std.process : environment;
 
 import params;
 
-import db.collections : isUsersEmpty, addUser, findUserByEmail, findUserByID;
+import db.collections : repopulateDB;
+import db.models;
 import handlers.home;
 import handlers.users : configureUserAPIRouter;
 
 ServerParams serverparams;
 
 void main(string[] args) {
-    // save arguments
+    // save arguments - if the arguments are not matched, terminate the program
     foreach (i; 1 .. args.length) {
         switch (args[i]) {
         case "--https":
@@ -43,7 +44,7 @@ void main(string[] args) {
 
     }
 
-    if (serverparams.repopulateIfEmpty && isUsersEmpty()) {
+    if (serverparams.repopulateIfEmpty) {
         repopulateDB();
     }
 
@@ -98,57 +99,4 @@ void main(string[] args) {
     }
 
     runApplication();
-
-}
-
-void repopulateDB() {
-    // populate users first
-    if (exists("./init-data/users.csv")) {
-        auto userFile = File("./init-data/users.csv");
-        writeln("Reading from user file: ", userFile.name);
-        // and save their information (id's or emails)
-    } else {
-        writeln("No ./init-data/users.csv file found. Skipping database population step.");
-        return;
-    }
-
-    // populate movies
-    if (exists("./init-data/movies.csv")) {
-        auto movieFile = File("./init-data/movies.csv");
-        writeln("Reading from movie file: ", movieFile.name);
-    } else {
-        writeln("No ./init-data/movies.csv file found. Skipping movie population step");
-        return;
-    }
-
-    // then we have the id's (get id from title name function and get id from username) to put in the reviews
-    if (exists("./init-data/reviews.csv")) {
-        auto reviewFile = File("./init-data/reviews.csv");
-        writeln("Reading from review file: ", reviewFile.name);
-    } else {
-        writeln("No ./init-data/reviews.csv file found. Skipping review population step.");
-    }
-}
-
-// test database repopulation
-unittest {
-    // check whether the starting database is empty
-    assert(isUsersEmpty() == true, "Starting users database is not empty");
-
-    // repopulation step
-    repopulateDB();
-
-    if (exists("./init-data/users.csv")) {
-        // test users present in the database as they are in csv
-
-        if (exists("./init-data/movies.csv")) {
-            // test movies present in the database as they are in csv
-
-            if (exists("./init-data/reviews.csv")) {
-                // test reviews present in the database as they are in csv
-
-            }
-        }
-    }
-
 }
