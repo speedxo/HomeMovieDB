@@ -36,4 +36,6 @@ docs/
 .vscode
 
 # don't upload your HTTPS certificates
-certificates/
+**/certificates/*
+# or your own starting data
+**/init-data/*

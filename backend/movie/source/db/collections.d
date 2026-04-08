@@ -12,6 +12,15 @@ private MongoCollection userCollection() {
     return DBClient.get.getCollection(environment["MONGO_DB"] ~ ".users");
 }
 
+bool isUsersEmpty() {
+    auto document = userCollection.findOne([]);
+
+    if (document.isNull)
+        return true;
+
+    return false;
+}
+
 void addUser(ref User user) {
     user._id = BsonObjectID.generate();
     user.createdAt = Clock.currTime(UTC());
