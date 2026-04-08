@@ -66,7 +66,7 @@ void deleteUser(BsonObjectID id) {
 // TODO: titleCollection / movieCollection / I still need to find a name for it
 
 /// Gives an initial state of the database with user-provided data
-void repopulateDB(string folder = "./init-data/") {
+void repopulateDB(string folder = "./movie/init-data/") {
     if (!isCollectionEmpty(userCollection))
         return;
 
@@ -104,7 +104,7 @@ unittest {
     assert(isCollectionEmpty(userCollection) == true, "Starting users database is not empty");
 
     // use a folder with test data
-    string folder = "./test-data/";
+    string folder = "./movie/test-data/";
 
     // repopulation step
     repopulateDB(folder);
