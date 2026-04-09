@@ -23,11 +23,35 @@ bool isCollectionEmpty(MongoCollection c) {
     return c.countDocuments(Bson.emptyObject) == 0;
 }
 
+// TODO: password authorisation and token authentication
 void addUser(ref User user) {
     user._id = BsonObjectID.generate();
     user.createdAt = Clock.currTime(UTC());
     user.updatedAt = user.createdAt;
     userCollection.insertOne(user);
+}
+
+void addUser(string name, string email) {
+    User user;
+    user._id = BsonObjectID.generate();
+    user.createdAt = Clock.currTime(UTC());
+    user.updatedAt = user.createdAt;
+    userCollection.insertOne(user);
+}
+
+void updateUser(BsonObjectID id, string name, string email) {
+    auto update = Bson([
+        "$set": Bson([
+            "name": Bson(name),
+            "email": Bson(email),
+            "updatedAt": Bson(BsonDate(Clock.currTime(UTC())))
+        ])
+    ]);
+    userCollection.updateOne(["_id": id], update);
+}
+
+void deleteUser(BsonObjectID id) {
+    userCollection.deleteOne(["_id": id]);
 }
 
 Nullable!User findUserByID(BsonObjectID id) {
@@ -48,22 +72,43 @@ Nullable!User findUserByEmail(string email) {
     return result;
 }
 
-void updateUser(BsonObjectID id, string name, string email) {
+// Title collection (might be named movies elsewhere)
+
+private MongoCollection titleCollection() {
+    return DBClient.get.getCollection(environment["MONGO_DB"] ~ ".titles");
+}
+
+void addTitle() {
+    throw new Exception("Function not implemented");
+}
+
+void updateTitle(BsonObjectID id, string title, string[] genres, string type, uint year) {
     auto update = Bson([
         "$set": Bson([
-            "name": Bson(name),
-            "email": Bson(email),
-            "updatedAt": Bson(BsonDate(Clock.currTime(UTC())))
+            "title": Bson(title),
+            "updatedAt": Bson(BsonDate(Clock.currTime(UTC()))),
+            "genres": Bson(genres),
+            "type": Bson(type),
+            "year": Bson(year)
         ])
     ]);
-    userCollection.updateOne(["_id": id], update);
+
+    titleCollection.updateOne(["_id": id], update);
 }
 
-void deleteUser(BsonObjectID id) {
-    userCollection.deleteOne(["_id": id]);
+void deleteTitle(BsonObjectID id) {
+    titleCollection.deleteOne(["_id": id]);
 }
 
-// TODO: titleCollection / movieCollection / I still need to find a name for it
+Nullable!Title findTitleByID(BsonObjectID id) {
+    throw new Exception("Function not implemented");
+}
+
+Nullable!Title findTitleByName(string name) {
+    throw new Exception("Function not implemented");
+}
+
+/* -------------------------------------------------------------- */
 
 /// Gives an initial state of the database with user-provided data
 void repopulateDB(string folder = "./movie/init-data/") {
@@ -102,6 +147,7 @@ void repopulateDB(string folder = "./movie/init-data/") {
 unittest {
     // check whether the starting database is empty
     assert(isCollectionEmpty(userCollection) == true, "Starting users database is not empty");
+    assert(isCollectionEmpty(titleCollection) == true, "Starting title database is not empty");
 
     // use a folder with test data
     string folder = "./movie/test-data/";
@@ -124,7 +170,19 @@ unittest {
     // test movies present in the database as they are in csv
     assert(exists(folder ~ "movies.csv"), "The " ~ folder ~ "movies.csv file was not found.");
 
+    auto movieFile = File(folder ~ "movies.csv");
+    foreach (line; csvReader!(string[string])(userFile.byLine.joiner("\n"), null)) {
+        Nullable!Title title = findTitleByName(line["Title"]);
+        assert(!title.isNull, "Title defined in csv was not found in db.");
+
+        assert(title.get.type == line["Type"], "Type of title defined in db does not match csv.");
+
+        // important: test saved date
+    }
+
     // test reviews present in the database as they are in csv
     assert(exists(folder ~ "reviews.csv"), "The " ~ folder ~ "reviews.csv file was not found.");
 
 }
+
+// TODO: another unittest that tests modifications and deletions (they can happen in parallel)
