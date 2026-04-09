@@ -78,14 +78,35 @@ private MongoCollection titleCollection() {
     return DBClient.get.getCollection(environment["MONGO_DB"] ~ ".titles");
 }
 
-void addTitle() {
-    throw new Exception("Function not implemented");
+/// Takes in the title object and inserts it into the titles collection in the db.
+/// !! Note that this function only sets the _id, createdAt, and updatedAt fields.
+/// Please remember to have the createdBy field set before calling this function 
+/// (or use the other overload).
+void addTitle(ref Title title) {
+    title._id = BsonObjectID.generate();
+    title.createdAt = Clock.currTime(UTC());
+    title.updatedAt = title.createdAt;
+
 }
 
-void updateTitle(BsonObjectID id, string title, string[] genres, string type, uint year) {
+void addTitle(string name, BsonObjectID createdBy, string[] genres, string type, uint year) {
+    Title title;
+    title._id = BsonObjectID.generate();
+    title.name = name;
+    title.createdAt = Clock.currTime(UTC());
+    title.updatedAt = title.createdAt;
+    title.createdBy = createdBy;
+    title.genres = genres;
+    title.type = type;
+    title.year = year;
+
+    titleCollection.insertOne(title);
+}
+
+void updateTitle(BsonObjectID id, string name, string[] genres, string type, uint year) {
     auto update = Bson([
         "$set": Bson([
-            "title": Bson(title),
+            "name": Bson(name),
             "updatedAt": Bson(BsonDate(Clock.currTime(UTC()))),
             "genres": Bson(genres),
             "type": Bson(type),
@@ -101,11 +122,29 @@ void deleteTitle(BsonObjectID id) {
 }
 
 Nullable!Title findTitleByID(BsonObjectID id) {
-    throw new Exception("Function not implemented");
+    Nullable!Title result;
+    auto document = titleCollection.findOne(["_id": id]);
+
+    if (!document.isNull) {
+        result = deserializeBson!Title(document);
+    }
+    return result;
 }
 
 Nullable!Title findTitleByName(string name) {
-    throw new Exception("Function not implemented");
+    Nullable!Title result;
+    auto document = titleCollection.findOne(["name": Bson(name)]);
+
+    if (!document.isNull) {
+        result = deserialiseBson!Title(document);
+    }
+    return result;
+}
+
+// Review collection
+
+private MongoCollection reviewCollection() {
+    return DBClient.get.getCollection(environment["MONGO_DB"] ~ ".reviews");
 }
 
 /* -------------------------------------------------------------- */
@@ -146,8 +185,9 @@ void repopulateDB(string folder = "./movie/init-data/") {
 /// tests database repopulation
 unittest {
     // check whether the starting database is empty
-    assert(isCollectionEmpty(userCollection) == true, "Starting users database is not empty");
-    assert(isCollectionEmpty(titleCollection) == true, "Starting title database is not empty");
+    assert(isCollectionEmpty(userCollection) == true, "Starting users collection is not empty");
+    assert(isCollectionEmpty(titleCollection) == true, "Starting title collection is not empty");
+    assert(isCollectionEmpty(reviewCollection) == true, "Starting review collection is not empty");
 
     // use a folder with test data
     string folder = "./movie/test-data/";
@@ -177,7 +217,9 @@ unittest {
 
         assert(title.get.type == line["Type"], "Type of title defined in db does not match csv.");
 
-        // important: test saved date
+        assert(title.get.year == line["Year"].To!int, "Year of title defined in db does not match csv.");
+
+        // important: test saved dates and genres
     }
 
     // test reviews present in the database as they are in csv
