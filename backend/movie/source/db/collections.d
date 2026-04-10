@@ -25,18 +25,21 @@ bool isCollectionEmpty(MongoCollection c) {
 
 // TODO: password authorisation and token authentication
 void addUser(ref User user) {
-    user._id = BsonObjectID.generate();
-    user.createdAt = Clock.currTime(UTC());
-    user.updatedAt = user.createdAt;
-    userCollection.insertOne(user);
+    userCollection.insertOne(userConfigHelper(user));
 }
 
 void addUser(string name, string email) {
     User user;
+    user.name = name;
+    user.email = email;
+    userCollection.insertOne(userConfigHelper(user));
+}
+
+private User userConfigHelper(ref User user) {
     user._id = BsonObjectID.generate();
     user.createdAt = Clock.currTime(UTC());
     user.updatedAt = user.createdAt;
-    userCollection.insertOne(user);
+    return user;
 }
 
 void updateUser(BsonObjectID id, string name, string email) {
@@ -154,11 +157,20 @@ void repopulateDB(string folder = "./movie/init-data/") {
     if (!isCollectionEmpty(userCollection))
         return;
 
+    /// associative array that associates user information to user ID's created at 
+    BsonObjectID[string] userIDs;
+
     // populate users first
     if (exists(folder ~ "users.csv")) {
         auto userFile = File(folder ~ "users.csv");
         writeln("Reading from user file: ", userFile.name);
         // and save their information (id's or emails)
+
+        foreach (line; csvReader!(string[string])(userFile.byLine.joiner("\n"), null)) {
+            // bypassing the usual addUser() functions, because we need the id's
+            User newUser;
+
+        }
     } else {
         writeln("No " ~ folder ~ "users.csv file found. Skipping database population step.");
         return;
