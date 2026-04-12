@@ -2,6 +2,7 @@ module db.collections;
 
 import vibe.db.mongo.mongo;
 import vibe.data.bson;
+import vibe.data.serialization;
 
 import std.process : environment;
 import std.typecons : Nullable;
@@ -10,6 +11,8 @@ import std.file;
 import std.csv;
 import std.algorithm;
 import std.stdio;
+import std.conv : to;
+import std.array : split;
 
 import db.client;
 import db.models;
@@ -35,6 +38,8 @@ void addUser(string name, string email) {
     userCollection.insertOne(userConfigHelper(user));
 }
 
+/// Generates an _id for a user object, and sets the created/updated at
+/// to the current UTC time.
 private User userConfigHelper(ref User user) {
     user._id = BsonObjectID.generate();
     user.createdAt = Clock.currTime(UTC());
@@ -86,32 +91,35 @@ private MongoCollection titleCollection() {
 /// Please remember to have the createdBy field set before calling this function 
 /// (or use the other overload).
 void addTitle(ref Title title) {
-    title._id = BsonObjectID.generate();
-    title.createdAt = Clock.currTime(UTC());
-    title.updatedAt = title.createdAt;
-
+    titleCollection.insertOne(titleConfigHelper(title));
 }
 
 void addTitle(string name, BsonObjectID createdBy, string[] genres, string type, uint year) {
     Title title;
-    title._id = BsonObjectID.generate();
     title.name = name;
-    title.createdAt = Clock.currTime(UTC());
-    title.updatedAt = title.createdAt;
     title.createdBy = createdBy;
     title.genres = genres;
     title.type = type;
     title.year = year;
 
-    titleCollection.insertOne(title);
+    titleCollection.insertOne(titleConfigHelper(title));
+}
+
+private Title titleConfigHelper(ref Title title) {
+    title._id = BsonObjectID.generate();
+    title.createdAt = Clock.currTime(UTC());
+    title.updatedAt = title.createdAt;
+
+    return title;
 }
 
 void updateTitle(BsonObjectID id, string name, string[] genres, string type, uint year) {
+
     auto update = Bson([
         "$set": Bson([
             "name": Bson(name),
             "updatedAt": Bson(BsonDate(Clock.currTime(UTC()))),
-            "genres": Bson(genres),
+            "genres": serializeToBson(genres),
             "type": Bson(type),
             "year": Bson(year)
         ])
@@ -139,7 +147,7 @@ Nullable!Title findTitleByName(string name) {
     auto document = titleCollection.findOne(["name": Bson(name)]);
 
     if (!document.isNull) {
-        result = deserialiseBson!Title(document);
+        result = deserializeBson!Title(document);
     }
     return result;
 }
@@ -157,8 +165,11 @@ void repopulateDB(string folder = "./movie/init-data/") {
     if (!isCollectionEmpty(userCollection))
         return;
 
-    /// associative array that associates user information to user ID's created at 
-    BsonObjectID[string] userIDs;
+    /// associative array that associates emails to user's objectID's 
+    BsonObjectID[string] userEmailIDs;
+
+    /// associative array that associates title names to objectID's
+    BsonObjectID[string] titleIDs;
 
     // populate users first
     if (exists(folder ~ "users.csv")) {
@@ -170,6 +181,15 @@ void repopulateDB(string folder = "./movie/init-data/") {
             // bypassing the usual addUser() functions, because we need the id's
             User newUser;
 
+            // configure new user
+            userConfigHelper(newUser);
+            newUser.email = line["Email"];
+            newUser.name = line["Name"];
+
+            // map email to id for later steps
+            userEmailIDs[newUser.email] = newUser._id;
+
+            userCollection.insertOne(newUser);
         }
     } else {
         writeln("No " ~ folder ~ "users.csv file found. Skipping database population step.");
@@ -178,8 +198,26 @@ void repopulateDB(string folder = "./movie/init-data/") {
 
     // populate movies
     if (exists(folder ~ "movies.csv")) {
+        import std.datetime.systime;
+
         auto movieFile = File(folder ~ "movies.csv");
         writeln("Reading from movie file: ", movieFile.name);
+
+        foreach (line; csvReader!(string[string])(movieFile.byLine.joiner("\n"), null)) {
+            Title newTitle;
+
+            titleConfigHelper(newTitle);
+            newTitle.name = line["Title"];
+            newTitle.createdBy = userEmailIDs[line["Created by"]];
+            newTitle.genres = line["Genres"].split(", ");
+            newTitle.type = line["Type"];
+            newTitle.year = to!int(line["Year"]);
+            newTitle.createdAt = SysTime.fromISOString(line["Date Created"]).toUTC();
+
+            titleCollection.insertOne(newTitle);
+
+            titleIDs[newTitle.name] = newTitle._id;
+        }
     } else {
         writeln("No " ~ folder ~ "movies.csv file found. Skipping movie population step");
         return;
@@ -196,10 +234,10 @@ void repopulateDB(string folder = "./movie/init-data/") {
 
 /// tests database repopulation
 unittest {
-    // check whether the starting database is empty
-    assert(isCollectionEmpty(userCollection) == true, "Starting users collection is not empty");
-    assert(isCollectionEmpty(titleCollection) == true, "Starting title collection is not empty");
-    assert(isCollectionEmpty(reviewCollection) == true, "Starting review collection is not empty");
+    // make sure the starting database is empty
+    userCollection.drop();
+    titleCollection.drop();
+    reviewCollection.drop();
 
     // use a folder with test data
     string folder = "./movie/test-data/";
@@ -229,7 +267,7 @@ unittest {
 
         assert(title.get.type == line["Type"], "Type of title defined in db does not match csv.");
 
-        assert(title.get.year == line["Year"].To!int, "Year of title defined in db does not match csv.");
+        assert(title.get.year == to!int(line["Year"]), "Year of title defined in db does not match csv.");
 
         // important: test saved dates and genres
     }
