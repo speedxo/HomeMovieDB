@@ -12,4 +12,5 @@ struct Title {
     string[] genres;
     string type;
     uint year;
+    BsonObjectID[] reviews;
 }
