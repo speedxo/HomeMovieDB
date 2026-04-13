@@ -12,7 +12,7 @@ import std.csv;
 import std.algorithm;
 import std.stdio;
 import std.conv : to;
-import std.array : split;
+import std.array;
 
 import db.client;
 import db.models;
@@ -152,15 +152,82 @@ Nullable!Title findTitleByName(string name) {
     return result;
 }
 
+Review[] titleReviews(BsonObjectID titleID) {
+    auto result = reviewCollection.findOne(
+        ["_id": titleID],
+        ["reviews": 1]
+    );
+    auto reviews = result["reviews"].get!(Bson[]);
+
+    // this might fail
+    auto cursor = reviewCollection.find!Review([
+        "_id": Bson(["$in": Bson(reviews)])
+    ]);
+
+    return cursor.array;
+}
+
 // Review collection
 
 private MongoCollection reviewCollection() {
     return DBClient.get.getCollection(environment["MONGO_DB"] ~ ".reviews");
 }
 
+void addReview(Review review) {
+    reviewCollection.insertOne(reviewConfigHelper(review));
+}
+
+void addReview(BsonObjectID titleID, BsonObjectID creatorID, int rating, bool recommended, string reviewBody = "") {
+    Review newReview;
+
+    newReview.titleID = titleID;
+    newReview.creatorID = creatorID;
+    newReview.rating = to!ubyte(rating);
+    newReview.recommended = recommended;
+    newReview.reviewBody = reviewBody;
+
+    reviewCollection.insertOne(reviewConfigHelper(newReview));
+}
+
+private Review reviewConfigHelper(ref Review review) {
+    review._id = BsonObjectID.generate();
+    review.createdAt = Clock.currTime(UTC());
+    review.updatedAt = review.createdAt;
+
+    return review;
+}
+
+void updateReview(BsonObjectID reviewID, int rating, bool recommended, string reviewBody = "") {
+    auto update = Bson([
+        "$set": Bson([
+            "updatedAt": Bson(BsonDate(Clock.currTime(UTC()))),
+            "rating": Bson(rating),
+            "recommended": Bson(recommended),
+            "reviewBody": Bson(reviewBody)
+        ])
+    ]);
+
+    reviewCollection.updateOne(["_id": reviewID], update);
+}
+
+void deleteReview(BsonObjectID reviewID) {
+    reviewCollection.deleteOne(["_id": reviewID]);
+}
+
+Nullable!Review findReviewByID(BsonObjectID reviewID) {
+    Nullable!Review result;
+
+    auto document = reviewCollection.findOne(["_id": reviewID]);
+    if (!document.isNull) {
+        result = deserializeBson!Review(document);
+    }
+
+    return result;
+}
+
 /* -------------------------------------------------------------- */
 
-/// Gives an initial state of the database with user-provided data
+/// Gives an initial state of the database with user-provided data, if any exists
 void repopulateDB(string folder = "./movie/init-data/") {
     if (!isCollectionEmpty(userCollection))
         return;
