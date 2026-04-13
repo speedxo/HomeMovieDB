@@ -234,11 +234,6 @@ void repopulateDB(string folder = "./movie/init-data/") {
 
 /// tests database repopulation
 unittest {
-    // make sure the starting database is empty
-    userCollection.drop();
-    titleCollection.drop();
-    reviewCollection.drop();
-
     // use a folder with test data
     string folder = "./movie/test-data/";
 
