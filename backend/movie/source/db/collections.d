@@ -299,44 +299,47 @@ void repopulateDB(string folder = "./movie/init-data/") {
     }
 }
 
-/// tests database repopulation
-unittest {
-    // use a folder with test data
-    string folder = "./movie/test-data/";
+version (integration) {
+    /// tests database repopulation
+    unittest {
+        // use a folder with test data
+        string folder = "./movie/test-data/";
 
-    // repopulation step
-    repopulateDB(folder);
+        // repopulation step
+        repopulateDB(folder);
 
-    // test users present in the database as they are in csv
-    assert(exists(folder ~ "users.csv"), "The " ~ folder ~ "users.csv file was not found.");
+        // test users present in the database as they are in csv
+        assert(exists(folder ~ "users.csv"), "The " ~ folder ~ "users.csv file was not found.");
 
-    auto userFile = File(folder ~ "users.csv");
-    foreach (line; csvReader!(string[string])(userFile.byLine.joiner("\n"), null)) {
-        // auto user = findUserByEmail(line["Email"]).get;
-        assert(!findUserByEmail(line["Email"]).isNull, "User defined in csv was not found in db.");
+        auto userFile = File(folder ~ "users.csv");
+        foreach (line; csvReader!(string[string])(userFile.byLine.joiner("\n"), null)) {
+            // auto user = findUserByEmail(line["Email"]).get;
+            assert(!findUserByEmail(line["Email"]).isNull, "User defined in csv was not found in db.");
 
-        assert(findUserByEmail(line["Email"]).get.name == line["Name"],
-            "User's email (used as identifier) and name (from db) does not match.");
+            assert(findUserByEmail(line["Email"]).get.name == line["Name"],
+                "User's email (used as identifier) and name (from db) does not match.");
+        }
+
+        // test movies present in the database as they are in csv
+        assert(exists(folder ~ "movies.csv"), "The " ~ folder ~ "movies.csv file was not found.");
+
+        auto movieFile = File(folder ~ "movies.csv");
+        foreach (line; csvReader!(string[string])(userFile.byLine.joiner("\n"), null)) {
+            Nullable!Title title = findTitleByName(line["Title"]);
+            assert(!title.isNull, "Title defined in csv was not found in db.");
+
+            assert(title.get.type == line["Type"], "Type of title defined in db does not match csv.");
+
+            assert(title.get.year == to!int(line["Year"]), "Year of title defined in db does not match csv.");
+
+            // important: test saved dates and genres
+        }
+
+        // test reviews present in the database as they are in csv
+        assert(exists(folder ~ "reviews.csv"), "The " ~ folder ~ "reviews.csv file was not found.");
+
     }
 
-    // test movies present in the database as they are in csv
-    assert(exists(folder ~ "movies.csv"), "The " ~ folder ~ "movies.csv file was not found.");
-
-    auto movieFile = File(folder ~ "movies.csv");
-    foreach (line; csvReader!(string[string])(userFile.byLine.joiner("\n"), null)) {
-        Nullable!Title title = findTitleByName(line["Title"]);
-        assert(!title.isNull, "Title defined in csv was not found in db.");
-
-        assert(title.get.type == line["Type"], "Type of title defined in db does not match csv.");
-
-        assert(title.get.year == to!int(line["Year"]), "Year of title defined in db does not match csv.");
-
-        // important: test saved dates and genres
-    }
-
-    // test reviews present in the database as they are in csv
-    assert(exists(folder ~ "reviews.csv"), "The " ~ folder ~ "reviews.csv file was not found.");
+    // TODO: another unittest that tests modifications and deletions (they can happen in parallel)
 
 }
-
-// TODO: another unittest that tests modifications and deletions (they can happen in parallel)
