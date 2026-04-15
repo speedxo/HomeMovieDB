@@ -11,5 +11,5 @@ struct Review {
     SysTime updatedAt;
     ubyte rating;
     bool recommended;
-    string reviewBody;
+    string reviewBody = "";
 }

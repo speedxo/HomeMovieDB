@@ -80,6 +80,22 @@ Nullable!User findUserByEmail(string email) {
     return result;
 }
 
+/// Adds the review's _id to the list of reviewID's under a user.
+/// Mostly used internally when addReview() is called.
+void addReviewToUser(BsonObjectID userID, BsonObjectID reviewID) {
+    auto result = userCollection.findOne(["_id": userID]);
+    auto reviews = result["reviews"].get!(Bson[]);
+
+    reviews ~= Bson(reviewID);
+
+    auto update = Bson([
+            "$set": Bson([
+                    "reviews": Bson(reviews)
+                ])
+        ]);
+    userCollection.updateOne(["_id": userID], update);
+}
+
 // Title collection (might be named movies elsewhere)
 
 private MongoCollection titleCollection() {
@@ -152,8 +168,9 @@ Nullable!Title findTitleByName(string name) {
     return result;
 }
 
+/// Retrieves all reviews for a specified title.
 Review[] titleReviews(BsonObjectID titleID) {
-    auto result = reviewCollection.findOne(
+    auto result = titleCollection.findOne(
         ["_id": titleID],
         ["reviews": 1]
     );
@@ -167,6 +184,22 @@ Review[] titleReviews(BsonObjectID titleID) {
     return cursor.array;
 }
 
+/// Adds the review's _id to the list of review id's under one title.
+/// Mostly used internally when addReview() is called.
+void addReviewToTitle(BsonObjectID titleID, BsonObjectID reviewID) {
+    auto result = titleCollection.findOne(["_id": titleID]);
+    auto reviews = result["reviews"].get!(Bson[]);
+
+    reviews ~= Bson(reviewID);
+
+    auto update = Bson([
+            "$set": Bson([
+                    "reviews": Bson(reviews)
+                ])
+        ]);
+    titleCollection.updateOne(["_id": titleID], update);
+}
+
 // Review collection
 
 private MongoCollection reviewCollection() {
@@ -174,11 +207,17 @@ private MongoCollection reviewCollection() {
 }
 
 void addReview(Review review) {
-    reviewCollection.insertOne(reviewConfigHelper(review));
+    reviewConfigHelper(review);
+
+    reviewCollection.insertOne(review);
+    addReviewToTitle(review.titleID, review._id);
+    addReviewToUser(review.creatorID, review._id);
 }
 
 void addReview(BsonObjectID titleID, BsonObjectID creatorID, int rating, bool recommended, string reviewBody = "") {
     Review newReview;
+
+    reviewConfigHelper(newReview);
 
     newReview.titleID = titleID;
     newReview.creatorID = creatorID;
@@ -186,7 +225,9 @@ void addReview(BsonObjectID titleID, BsonObjectID creatorID, int rating, bool re
     newReview.recommended = recommended;
     newReview.reviewBody = reviewBody;
 
-    reviewCollection.insertOne(reviewConfigHelper(newReview));
+    reviewCollection.insertOne(newReview);
+    addReviewToTitle(newReview.titleID, newReview._id);
+    addReviewToUser(newReview.creatorID, newReview._id);
 }
 
 private Review reviewConfigHelper(ref Review review) {
@@ -294,6 +335,17 @@ void repopulateDB(string folder = "./movie/init-data/") {
     if (exists(folder ~ "reviews.csv")) {
         auto reviewFile = File(folder ~ "reviews.csv");
         writeln("Reading from review file: ", reviewFile.name);
+
+        foreach (line; csvReader!(string[string])(reviewFile.buLine.joiner("\n"), null)) {
+            Review newReview;
+
+            newReview.titleID = titleIDs[line["Title"]];
+            newReview.creatorID = userEmailIDs[line["Created by"]];
+            newReview.recommended = line["Recommended"] == "Yes" ? true : false;
+            newReview.rating = to!ubyte(line["Rating"]);
+
+            addReview(newReview);
+        }
     } else {
         writeln("No " ~ folder ~ "reviews.csv file found. Skipping review population step.");
     }
@@ -305,12 +357,17 @@ version (integration) {
         // use a folder with test data
         string folder = "./movie/test-data/";
 
+        // test users present in the database as they are in csv
+        assert(exists(folder ~ "users.csv"), "The " ~ folder ~ "users.csv file was not found.");
+        // test movies present in the database as they are in csv
+        assert(exists(folder ~ "movies.csv"), "The " ~ folder ~ "movies.csv file was not found.");
+        // test reviews present in the database as they are in csv
+        assert(exists(folder ~ "reviews.csv"), "The " ~ folder ~ "reviews.csv file was not found.");
+
         // repopulation step
         repopulateDB(folder);
 
-        // test users present in the database as they are in csv
-        assert(exists(folder ~ "users.csv"), "The " ~ folder ~ "users.csv file was not found.");
-
+        // Testing successful population of user data
         auto userFile = File(folder ~ "users.csv");
         foreach (line; csvReader!(string[string])(userFile.byLine.joiner("\n"), null)) {
             // auto user = findUserByEmail(line["Email"]).get;
@@ -320,14 +377,13 @@ version (integration) {
                 "User's email (used as identifier) and name (from db) does not match.");
         }
 
-        // test movies present in the database as they are in csv
-        assert(exists(folder ~ "movies.csv"), "The " ~ folder ~ "movies.csv file was not found.");
-
+        // Testing successful population of movie and review data
         auto movieFile = File(folder ~ "movies.csv");
-        foreach (line; csvReader!(string[string])(userFile.byLine.joiner("\n"), null)) {
+        foreach (line; csvReader!(string[string])(movieFile.byLine.joiner("\n"), null)) {
             Nullable!Title title = findTitleByName(line["Title"]);
             assert(!title.isNull, "Title defined in csv was not found in db.");
 
+            writeln("Testing title type: " ~ title.get.type);
             assert(title.get.type == line["Type"], "Type of title defined in db does not match csv.");
 
             assert(title.get.year == to!int(line["Year"]), "Year of title defined in db does not match csv.");
@@ -335,9 +391,10 @@ version (integration) {
             // important: test saved dates and genres
         }
 
-        // test reviews present in the database as they are in csv
-        assert(exists(folder ~ "reviews.csv"), "The " ~ folder ~ "reviews.csv file was not found.");
-
+        // auto reviewFile = File(folder ~ "movies.csv");
+        // foreach (line; csvReader!(string[string])(reviewFile.byLine.joiner("\n"), null)) {
+        //     Nullable!Review review = findReviewByID
+        // }
     }
 
     // TODO: another unittest that tests modifications and deletions (they can happen in parallel)
