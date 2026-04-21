@@ -96,6 +96,23 @@ void addReviewToUser(BsonObjectID userID, BsonObjectID reviewID) {
     userCollection.updateOne(["_id": userID], update);
 }
 
+/// Retrieves all reviews made by a user.
+/// Returns an array of the actual Review objects.
+Review[] findAllUserReviews(BsonObjectID userID) {
+    auto result = userCollection.findOne(
+        ["_id": userID],
+        ["reviews": 1]
+    );
+    auto reviews = result["reviews"].get!(Bson[]);
+
+    // this might fail
+    auto cursor = reviewCollection.find!Review([
+        "_id": Bson(["$in": Bson(reviews)])
+    ]);
+
+    return cursor.array;
+}
+
 // Title collection (might be named movies elsewhere)
 
 private MongoCollection titleCollection() {
@@ -110,7 +127,8 @@ void addTitle(ref Title title) {
     titleCollection.insertOne(titleConfigHelper(title));
 }
 
-void addTitle(string name, BsonObjectID createdBy, string[] genres, string type, uint year) {
+void addTitle(string name, BsonObjectID createdBy, string[] genres = [], Nullable!string type =
+        string.init, Nullable!uint year = uint.init) {
     Title title;
     title.name = name;
     title.createdBy = createdBy;
@@ -169,14 +187,20 @@ Nullable!Title findTitleByName(string name) {
 }
 
 /// Retrieves all reviews for a specified title.
-Review[] titleReviews(BsonObjectID titleID) {
+/// Returns an array of the actual Review objects.
+Review[] findAllTitleReviews(BsonObjectID titleID) {
     auto result = titleCollection.findOne(
         ["_id": titleID],
         ["reviews": 1]
     );
-    auto reviews = result["reviews"].get!(Bson[]);
 
-    // this might fail
+    auto reviewsBson = result["reviews"];
+    Bson[] reviews = reviewsBson.type == Bson.Type.array
+        ? reviewsBson.get!(Bson[]) : [];
+
+    if (reviews.length == 0)
+        return [];
+
     auto cursor = reviewCollection.find!Review([
         "_id": Bson(["$in": Bson(reviews)])
     ]);
@@ -336,7 +360,7 @@ void repopulateDB(string folder = "./movie/init-data/") {
         auto reviewFile = File(folder ~ "reviews.csv");
         writeln("Reading from review file: ", reviewFile.name);
 
-        foreach (line; csvReader!(string[string])(reviewFile.buLine.joiner("\n"), null)) {
+        foreach (line; csvReader!(string[string])(reviewFile.byLine.joiner("\n"), null)) {
             Review newReview;
 
             newReview.titleID = titleIDs[line["Title"]];
@@ -383,7 +407,7 @@ version (integration) {
             Nullable!Title title = findTitleByName(line["Title"]);
             assert(!title.isNull, "Title defined in csv was not found in db.");
 
-            writeln("Testing title type: " ~ title.get.type);
+            // writeln("Testing title type: " ~ title.get.type);
             assert(title.get.type == line["Type"], "Type of title defined in db does not match csv.");
 
             assert(title.get.year == to!int(line["Year"]), "Year of title defined in db does not match csv.");
@@ -391,10 +415,38 @@ version (integration) {
             // important: test saved dates and genres
         }
 
-        // auto reviewFile = File(folder ~ "movies.csv");
-        // foreach (line; csvReader!(string[string])(reviewFile.byLine.joiner("\n"), null)) {
-        //     Nullable!Review review = findReviewByID
-        // }
+        auto reviewFile = File(folder ~ "movies.csv");
+        foreach (line; csvReader!(string[string])(reviewFile.byLine.joiner("\n"), null)) {
+            // since each review has a title name in the csv, get the titles that have reviews
+            Nullable!Title title = findTitleByName(line["Title"]);
+            assert(!title.isNull, "Title associated review for \"" ~ line["Title"] ~ "\" not found.");
+
+            // get the reviews that are under those titles
+            Review[] titleReviews = findAllTitleReviews(title.get._id);
+
+            // then test whether they match those in the csv
+            assert(titleReviews.length > 0, "Review information not found for review under title: "
+                    ~ line["Title"]);
+
+            // Get the user that is associated with the review
+            Nullable!User creator = findUserByEmail(line["Created by"]);
+            assert(!creator.isNull, "User associated with review under title \""
+                    ~ line["Title"] ~ "\" in csv was not found.");
+
+            Review[] userReviews = findAllUserReviews(creator.get._id);
+            assert(userReviews.length > 0, "Review information not found for a review under user: "
+                    ~ line["Created by"]);
+
+            // By now we know that the title in the csv has a review and a user in the csv has a review
+            // since we only have one review per title for each user,
+            // finding the review that corresponds to the title name
+            // in the current line in the csv should be the same review every time.
+
+            // The intersection of the two arrays:
+            auto sect = setIntersection(title.get.reviews.sort(), creator.get.reviews.sort());
+            // this id info is not in the csv but we can be pretty sure this is our current review in the csv
+            // assert(sect.)
+        }
     }
 
     // TODO: another unittest that tests modifications and deletions (they can happen in parallel)

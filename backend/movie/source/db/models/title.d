@@ -2,6 +2,8 @@ module db.models.title;
 
 import vibe.data.bson;
 import std.datetime : SysTime;
+import std.typecons : Nullable;
+import vibe.data.serialization : optional;
 
 struct Title {
     BsonObjectID _id;
@@ -9,8 +11,8 @@ struct Title {
     SysTime createdAt;
     SysTime updatedAt;
     BsonObjectID createdBy;
-    string[] genres;
-    string type;
-    uint year;
-    BsonObjectID[] reviews;
+    @optional string[] genres = [];
+    @optional string type = "";
+    @optional uint year = uint.max;
+    @optional BsonObjectID[] reviews = [];
 }
