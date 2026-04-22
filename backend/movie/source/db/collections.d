@@ -293,9 +293,7 @@ Nullable!Review findReviewByID(BsonObjectID reviewID) {
 /* -------------------------------------------------------------- */
 
 /// Gives an initial state of the database with user-provided data, if any exists
-void repopulateDB(string folder = "./movie/init-data/") {
-    if (!isCollectionEmpty(userCollection))
-        return;
+bool repopulateDB(string folder = "./movie/init-data/") {
 
     /// associative array that associates emails to user's objectID's 
     BsonObjectID[string] userEmailIDs;
@@ -325,7 +323,7 @@ void repopulateDB(string folder = "./movie/init-data/") {
         }
     } else {
         writeln("No " ~ folder ~ "users.csv file found. Skipping database population step.");
-        return;
+        return false;
     }
 
     // populate movies
@@ -352,7 +350,7 @@ void repopulateDB(string folder = "./movie/init-data/") {
         }
     } else {
         writeln("No " ~ folder ~ "movies.csv file found. Skipping movie population step");
-        return;
+        return false;
     }
 
     // then we have the id's (get id from title name function and get id from username) to put in the reviews
@@ -372,12 +370,18 @@ void repopulateDB(string folder = "./movie/init-data/") {
         }
     } else {
         writeln("No " ~ folder ~ "reviews.csv file found. Skipping review population step.");
+        return false;
     }
+
+    return true;
 }
 
 version (integration) {
     /// tests database repopulation
+    @("Database Repopulation")
     unittest {
+        import std.algorithm.comparison : isPermutation;
+
         // use a folder with test data
         string folder = "./movie/test-data/";
 
@@ -389,7 +393,7 @@ version (integration) {
         assert(exists(folder ~ "reviews.csv"), "The " ~ folder ~ "reviews.csv file was not found.");
 
         // repopulation step
-        repopulateDB(folder);
+        assert(repopulateDB(folder), "Failed to fully complete repopulation step.");
 
         // Testing successful population of user data
         auto userFile = File(folder ~ "users.csv");
@@ -413,13 +417,19 @@ version (integration) {
             assert(title.get.year == to!int(line["Year"]), "Year of title defined in db does not match csv.");
 
             // important: test saved dates and genres
+            assert(title.get.createdAt == SysTime.fromISOString(line["Date Created"])
+                    .toUTC(),
+                    "Title's date created in db does not match csv.");
+
+            assert(isPermutation(title.get.genres, line["Genres"].split(", ")),
+                "Title's genre list in db does not match csv");
         }
 
         auto reviewFile = File(folder ~ "movies.csv");
         foreach (line; csvReader!(string[string])(reviewFile.byLine.joiner("\n"), null)) {
             // since each review has a title name in the csv, get the titles that have reviews
             Nullable!Title title = findTitleByName(line["Title"]);
-            assert(!title.isNull, "Title associated review for \"" ~ line["Title"] ~ "\" not found.");
+            assert(!title.isNull, "Title \"" ~ line["Title"] ~ "\" associated with a review was not found.");
 
             // get the reviews that are under those titles
             Review[] titleReviews = findAllTitleReviews(title.get._id);
