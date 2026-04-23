@@ -27,6 +27,7 @@ bool isCollectionEmpty(MongoCollection c) {
 }
 
 // TODO: password authorisation and token authentication
+// TODO: enforce unique user names
 void addUser(ref User user) {
     userCollection.insertOne(userConfigHelper(user));
 }
@@ -74,6 +75,15 @@ Nullable!User findUserByID(BsonObjectID id) {
 Nullable!User findUserByEmail(string email) {
     Nullable!User result;
     auto document = userCollection.findOne(["email": Bson(email)]);
+    if (!document.isNull) {
+        result = deserializeBson!User(document);
+    }
+    return result;
+}
+
+Nullable!User findUserByUsername(string name) {
+    Nullable!User result;
+    auto document = userCollection.findOne(["name": Bson(name)]);
     if (!document.isNull) {
         result = deserializeBson!User(document);
     }
@@ -294,6 +304,7 @@ Nullable!Review findReviewByID(BsonObjectID reviewID) {
 
 /// Gives an initial state of the database with user-provided data, if any exists
 bool repopulateDB(string folder = "./movie/init-data/") {
+    import std.string : isNumeric;
 
     /// associative array that associates emails to user's objectID's 
     BsonObjectID[string] userEmailIDs;
@@ -341,7 +352,9 @@ bool repopulateDB(string folder = "./movie/init-data/") {
             newTitle.createdBy = userEmailIDs[line["Created by"]];
             newTitle.genres = line["Genres"].split(", ");
             newTitle.type = line["Type"];
-            newTitle.year = to!int(line["Year"]);
+            if ((line["Year"].length == 4) & isNumeric(line["Year"])) {
+                newTitle.year = to!int(line["Year"]);
+            }
             newTitle.createdAt = SysTime.fromISOString(line["Date Created"]).toUTC();
 
             titleCollection.insertOne(newTitle);
@@ -393,15 +406,17 @@ version (integration) {
         assert(exists(folder ~ "reviews.csv"), "The " ~ folder ~ "reviews.csv file was not found.");
 
         // repopulation step
-        assert(repopulateDB(folder), "Failed to fully complete repopulation step.");
+        bool repopulationSuccess = repopulateDB(folder);
+        assert(repopulationSuccess, "Failed to fully complete repopulation step.");
 
         // Testing successful population of user data
         auto userFile = File(folder ~ "users.csv");
         foreach (line; csvReader!(string[string])(userFile.byLine.joiner("\n"), null)) {
-            // auto user = findUserByEmail(line["Email"]).get;
-            assert(!findUserByEmail(line["Email"]).isNull, "User defined in csv was not found in db.");
+            auto user = findUserByEmail(line["Email"]);
 
-            assert(findUserByEmail(line["Email"]).get.name == line["Name"],
+            assert(!user.isNull, "User defined in csv was not found in db.");
+
+            assert(user.get.name == line["Name"],
                 "User's email (used as identifier) and name (from db) does not match.");
         }
 
@@ -453,9 +468,12 @@ version (integration) {
             // in the current line in the csv should be the same review every time.
 
             // The intersection of the two arrays:
-            auto sect = setIntersection(title.get.reviews.sort(), creator.get.reviews.sort());
+            auto sect = setIntersection(title.get.reviews.sort(), creator.get.reviews.sort()).array;
             // this id info is not in the csv but we can be pretty sure this is our current review in the csv
-            // assert(sect.)
+            assert(sect.length < 1, "No common review id found under title: \"" ~ title.get.name ~
+                    "\" and user: " ~ creator.get.name);
+            assert(sect.length > 1, "More than one common review found under title: \"" ~
+                    title.get.name ~ "\" and user: " ~ creator.get.name);
         }
     }
 
