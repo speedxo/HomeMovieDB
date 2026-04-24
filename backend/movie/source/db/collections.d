@@ -143,8 +143,8 @@ void addTitle(string name, BsonObjectID createdBy, string[] genres = [], Nullabl
     title.name = name;
     title.createdBy = createdBy;
     title.genres = genres;
-    title.type = type;
-    title.year = year;
+    title.type = type.get;
+    title.year = year.get;
 
     titleCollection.insertOne(titleConfigHelper(title));
 }
@@ -440,7 +440,7 @@ version (integration) {
                 "Title's genre list in db does not match csv");
         }
 
-        auto reviewFile = File(folder ~ "movies.csv");
+        auto reviewFile = File(folder ~ "reviews.csv");
         foreach (line; csvReader!(string[string])(reviewFile.byLine.joiner("\n"), null)) {
             // since each review has a title name in the csv, get the titles that have reviews
             Nullable!Title title = findTitleByName(line["Title"]);
@@ -469,14 +469,26 @@ version (integration) {
 
             // The intersection of the two arrays:
             auto sect = setIntersection(title.get.reviews.sort(), creator.get.reviews.sort()).array;
+
+            // writeln(
+            //     "------------------" ~ title.get.name ~ " and " ~ creator.get.name ~ "------------------");
+            // writeln("title in csv: ", line["Title"]);
+            // writeln("title reviews: ", title.get.reviews.sort());
+            // writeln("creator in csv: ", line["Created by"]);
+            // writeln("creator reviews: ", creator.get.reviews.sort());
+            // writeln("detected intersection: ", sect);
+
             // this id info is not in the csv but we can be pretty sure this is our current review in the csv
-            assert(sect.length < 1, "No common review id found under title: \"" ~ title.get.name ~
+            assert(!(sect.length < 1), "No common review id found under title: \"" ~ title.get.name ~
                     "\" and user: " ~ creator.get.name);
-            assert(sect.length > 1, "More than one common review found under title: \"" ~
+            assert(!(sect.length > 1), "More than one common review found under title: \"" ~
                     title.get.name ~ "\" and user: " ~ creator.get.name);
         }
     }
 
     // TODO: another unittest that tests modifications and deletions (they can happen in parallel)
+    @("Normal CRUD tests")
+    unittest {
 
+    }
 }
