@@ -6,12 +6,13 @@ import vibe.data.bson;
 import vibe.vibe;
 
 import db.models.user : User;
-import db.collections : addUser, findUserByID, findUserByEmail, deleteUser, updateUser;
+import db.collections : addUser, findUserByID, findUserByEmail, findUserByUsername, deleteUser, updateUser;
 
 URLRouter configureUserAPIRouter() {
     auto router = new URLRouter();
     router.get("/api/user/id/:id", &getUserById);
-    router.get("/api/user/email/:email", &getUserByEmail);
+    // router.get("/api/user/email/:email", &getUserByEmail);
+    router.get("/api/user/:name", &getUserByUsername);
     router.post("/api/user", &createUser);
 
     return router;
@@ -40,6 +41,17 @@ void getUserByEmail(scope HTTPServerRequest req, scope HTTPServerResponse res) {
         return;
     }
 
+    res.writeJsonBody(user.get);
+}
+
+void getUserByUsername(scope HTTPServerRequest req, scope HTTPServerResponse res) {
+    auto name = req.params["name"];
+    auto user = findUserByUsername(name);
+    if (user.isNull) {
+        res.statusCode = HTTPStatus.notFound;
+        res.writeJsonBody(["error": "User not found"]);
+        return;
+    }
     res.writeJsonBody(user.get);
 }
 

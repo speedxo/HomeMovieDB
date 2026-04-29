@@ -10,7 +10,8 @@ COPY . .
 
 # build application using dub
 ARG BUILD_TYPE="release"
-RUN cd movie && dub build --build=${BUILD_TYPE}
+ARG CONFIG="application"
+RUN cd movie && dub build --build=${BUILD_TYPE} --config=${CONFIG}
 
 # privilege lowering - docker best practice
 RUN useradd -r -s /bin/false vibeapp

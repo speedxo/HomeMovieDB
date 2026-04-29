@@ -35,6 +35,8 @@ docs/
 # VSCode 
 .vscode
 
+.idea
+
 # don't upload your HTTPS certificates
 **/certificates/*
 # or your own starting data
