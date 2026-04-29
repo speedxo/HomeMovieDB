@@ -2,16 +2,17 @@ name: "home moviedb test"
 
 services:
   mongodb:
-    env_file:
-      - .env.test
-    volumes:
-      - type: tmpfs
-        target: /data/db
+    restart: "no"
+    command: ["true"]
 
   backend:
     build:
       args:
         BUILD_TYPE: "unittest"
+        CONFIG: "unittest"
     env_file:
       - .env.test
+    depends_on:
+      mongodb:
+        condition: service_started
     command: sh -c "./movie/out/movie && echo 'Normal Exit, All Tests Passed' || 'Abnormal Exit, Some Tests Failed'"

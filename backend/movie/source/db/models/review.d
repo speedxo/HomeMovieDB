@@ -6,7 +6,10 @@ import std.datetime : SysTime;
 struct Review {
     BsonObjectID _id;
     BsonObjectID titleID;
-    BsonObjectID creator;
+    BsonObjectID creatorID;
+    SysTime createdAt;
+    SysTime updatedAt;
     ubyte rating;
-    string reviewBody;
+    bool recommended;
+    string reviewBody = "";
 }

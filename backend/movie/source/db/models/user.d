@@ -2,6 +2,7 @@ module db.models.user;
 
 import vibe.data.bson;
 import std.datetime : SysTime;
+import vibe.data.serialization : optional;
 
 struct User {
     BsonObjectID _id;
@@ -9,8 +10,8 @@ struct User {
     string email;
     SysTime createdAt;
     SysTime updatedAt;
-    BsonObjectID[] seenTitles;
-    BsonObjectID[] watchingTitles;
-    BsonObjectID[] topTitles;
-    BsonObjectID[] reviews;
+    @optional BsonObjectID[] seenTitles = [];
+    @optional BsonObjectID[] watchingTitles = [];
+    @optional BsonObjectID[] topTitles = [];
+    @optional BsonObjectID[] reviews = [];
 }
