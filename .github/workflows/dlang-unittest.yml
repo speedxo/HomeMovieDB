@@ -10,12 +10,12 @@ permissions:
 
 jobs:
   build:
-
     runs-on: ubuntu-latest
 
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
+
     - name: Dlang environment setup
       uses: dlang-community/setup-dlang@4c99aa991ce7d19dd3064de0a4f2f6b2f152e2d7
 
@@ -23,11 +23,15 @@ jobs:
       run: | 
         # Construct the testing environment variable 
         # for compatibility with the already existing docker compose files
-        cat >> .env << EOF
+        cat >> .env.test << EOF
         DB_ROOT_USER=${{ secrets.DB_ROOT_USER }}
         DB_PASSWORD=${{ secrets.DB_PASSWORD }}
         DB_NAME=${{ secrets.DB_NAME }}
         EOF
+
+        # It won't run unless this file also exists:
+        echo "" >> .env
+        
     - name: 'Build & Test'
       run: |
         # Build and run is all handled by compose overrides and the dockerfile
