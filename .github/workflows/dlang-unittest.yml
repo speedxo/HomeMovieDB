@@ -21,9 +21,9 @@ jobs:
 
     - name: '.env file construction'
       run: | 
-        # Construct the testing environment variable for compatibility 
-        # with the already existing docker compose files
-        cat >> .env.test << EOF
+        # Construct the testing environment variable 
+        # for compatibility with the already existing docker compose files
+        cat >> .env << EOF
         DB_ROOT_USER=${{ secrets.DB_ROOT_USER }}
         DB_PASSWORD=${{ secrets.DB_PASSWORD }}
         DB_NAME=${{ secrets.DB_NAME }}
