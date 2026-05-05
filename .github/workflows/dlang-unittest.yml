@@ -10,6 +10,7 @@ permissions:
 
 jobs:
   build:
+    environment: Testing
     runs-on: ubuntu-latest
 
     steps:
@@ -31,7 +32,7 @@ jobs:
 
         # It won't run unless this file also exists:
         echo "" >> .env
-        
+
     - name: 'Build & Test'
       run: |
         # Build and run is all handled by compose overrides and the dockerfile
